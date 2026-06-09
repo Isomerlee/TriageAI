@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TriageAI - Staff Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #F6F8F6;
+      --surface: #FFFFFF;
+      --border: #DDE5E0;
+      --text-main: #1C231F;
+      --text-muted: #6B7770;
+      --primary: #429E73;
+      --primary-light: #E6F3EC;
+
+      /* KTAS Colors */
+      --ktas-1: #2563EB;
+      /* Blue */
+      --ktas-2: #DC2626;
+      /* Red */
+      --ktas-3: #F59E0B;
+      /* Yellow */
+      --ktas-4: #10B981;
+      /* Green */
+      --ktas-5: #F6F8F6;
+      /* White/Gray */
+      --ktas-5-text: #6B7770;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Pretendard', sans-serif;
+    }
+
+    body {
+      background: #E5E7EB;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .macbook-wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .macbook-frame {
+      width: 1440px;
+      height: 900px;
+      transform: scale(min(1, calc(94vw / 1440), calc(94vh / 900)));
+      transform-origin: center center;
+      flex-shrink: 0;
+      background: #000;
+      border: 16px solid #1e293b;
+      border-radius: 24px;
+      position: relative;
+      box-shadow: 0 32px 64px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .macbook-notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 160px;
+      height: 24px;
+      background: #1e293b;
+      border-bottom-left-radius: 12px;
+      border-bottom-right-radius: 12px;
+      z-index: 100;
+    }
+
+    .dashboard {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-main);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Navbar */
+    .dash-nav {
+      height: 56px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-stats {
+      display: flex;
+      gap: 20px;
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .stat-item span {
+      color: var(--text-main);
+      font-weight: 700;
+      margin-left: 6px;
+    }
+
+    /* Body Layout */
+    .dash-body {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      overflow: hidden;
+    }
+
+    /* Left Queue */
+    .dash-queue {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .queue-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .queue-filters {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .q-filter {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      background: var(--bg-main);
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .q-filter.active {
+      background: var(--text-main);
+      color: #fff;
+    }
+
+    .queue-list {
+      flex: 1;
+      overflow-y: auto;
+      -ms-overflow-style: none; /* IE and Edge */
+      scrollbar-width: none; /* Firefox */
+    }
+    .queue-list::-webkit-scrollbar {
+      display: none; /* Chrome, Safari and Opera */
+    }
+
+    .q-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: grab;
+      transition: background 0.1s;
+      border-left: 4px solid transparent;
+    }
+
+    .q-item:active {
+      cursor: grabbing;
+    }
+
+    .q-item:hover {
+      background: var(--bg-main);
+    }
+
+    .q-item.active {
+      background: var(--primary-light);
+      border-left-color: var(--primary);
+    }
+
+    .q-item.drag-over {
+      border-top: 2px solid var(--primary);
+    }
+
+    .drag-handle {
+      color: #CBD5E1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.1s;
+    }
+
+    .q-item:hover .drag-handle {
+      color: #94A3B8;
+    }
+
+    .q-item-top {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      align-items: center;
+    }
+
+    .q-name {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--text-main);
+    }
+
+    .ktas-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .k1 {
+      background: var(--ktas-1);
+    }
+
+    .k2 {
+      background: var(--ktas-2);
+    }
+
+    .k3 {
+      background: var(--ktas-3);
+      color: #fff;
+    }
+
+    .k4 {
+      background: var(--ktas-4);
+    }
+
+    .k5 {
+      background: var(--ktas-5);
+      color: var(--ktas-5-text);
+      border: 1px solid #CBD5E1;
+    }
+
+    .q-symp {
+      font-size: 15px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .q-meta {
+      font-size: 14px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .delay-alert {
+      color: var(--ktas-2);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .normal-alert {
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Center Map */
+    .dash-map {
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .map-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .zone {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    }
+
+    .zone-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .bed-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 16px;
+    }
+
+    .bed {
+      height: 80px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: var(--bg-main);
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.1s;
+    }
+
+    .bed:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .bed.active {
+      border: 2px solid var(--primary);
+      background: var(--primary-light);
+    }
+
+    .bed-num {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .bed-patient {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+    }
+
+    .bed.empty {
+      border: 1px dashed #CBD5E1;
+      background: transparent;
+      cursor: default;
+    }
+
+    .bed.empty:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .bed.empty .bed-patient {
+      display: none;
+    }
+
+    /* Right Detail */
+    .dash-detail {
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .detail-header {
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .d-name {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .d-meta {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .detail-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    /* Tabs for AI vs Raw */
+    .tabs {
+      display: flex;
+      background: var(--bg-main);
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 24px;
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: var(--surface);
+      color: var(--primary);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    .ai-box {
+      background: var(--primary-light);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .ai-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ai-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-main);
+    }
+
+    .ai-disclaimer {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .raw-box {
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .raw-row {
+      margin-bottom: 16px;
+    }
+
+    .raw-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .raw-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .raw-value {
+      font-size: 14px;
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 24px 0 16px;
+      color: var(--text-main);
+    }
+
+    .status-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .timeline {
+      margin-left: 8px;
+      border-left: 2px solid var(--border);
+      padding-left: 16px;
+    }
+
+    .tl-item {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .tl-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .tl-item::before {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      position: absolute;
+      left: -22px;
+      top: 4px;
+    }
+
+    .tl-item.done::before {
+      background: var(--primary);
+    }
+
+    .tl-item.warn::before {
+      background: var(--ktas-2);
+    }
+
+    .tl-time {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .tl-desc {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+        .tl-desc.warn {
+      color: var(--ktas-2);
+      font-weight: 700;
+    }
+    .modal-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center;
+      border-radius: 24px;
+    }
+    .modal-content {
+      background: var(--bg-main); border-radius: 16px; padding: 24px; width: 600px; box-shadow: 0 16px 32px rgba(0,0,0,0.2);
+    }
+    .modal-close {
+      float: right; cursor: pointer; font-size: 24px; font-weight: bold; color: var(--text-muted); line-height: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="macbook-wrapper">
+    <div class="macbook-frame">
+      <div class="macbook-notch"></div>
+
+      <div class="dashboard">
+        <!-- Navbar -->
+        <nav class="dash-nav">
+          <div class="nav-logo">
+            <span style="font-size: 20px;">🏥</span> TriageAI Dashboard
+          </div>
+          <div class="nav-stats">
+            <div class="stat-item">대기 환자 <span id="stat-count">0명</span></div>
+            <div class="stat-item">응급구역 혼잡도 <span style="color:#DC2626">90%</span></div>
+            <div class="stat-item">평균 대기시간 <span>34분</span></div>
+            <button onclick="document.getElementById('bed-modal').style.display='flex'" style="margin-left: 16px; padding: 6px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-main); cursor: pointer; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">응급실 병상 현황</button>
+          </div>
+        </nav>
+
+        <div class="dash-body">
+          <!-- Left: Queue -->
+          <aside class="dash-queue">
+            <div class="queue-header">
+              <h2 style="font-size: 16px; font-weight: 700;">대기열 (KTAS)</h2>
+              <div class="queue-filters" id="queue-filters">
+                <div class="q-filter active" onclick="setFilter('ALL')">전체</div>
+                <div class="q-filter" onclick="setFilter('KTAS1-2')">KTAS 1-2</div>
+                <div class="q-filter" onclick="setFilter('KTAS3')">KTAS 3</div>
+                <div class="q-filter" onclick="setFilter('KTAS4-5')">KTAS 4-5</div>
+                <div class="q-filter" onclick="setFilter('UNDER15')">15세 미만</div>
+                <div class="q-filter" onclick="setFilter('AI_SORT')">TriageAI 순 정렬</div>
+              </div>
+            </div>
+
+            <div class="queue-list" id="queue-list">
+              <!-- Rendered dynamically -->
+            </div>
+          </aside>
+
+          <!-- Right: Detail -->
+          <aside class="dash-detail" style="border-left: 1px solid var(--border);">
+            <div id="patient-detail-container" style="display: none; height: 100%; flex-direction: column;">
+              <div class="detail-header" style="padding: 24px; border-bottom: 1px solid var(--border); background: var(--surface);">
+                <div class="d-name" style="font-size: 22px; font-weight: 700; margin-bottom: 8px;"><span id="pd-name">이정재</span> <span class="ktas-badge k2" id="pd-ktas">KTAS 2</span></div>
+                <div class="d-meta" id="pd-meta" style="font-size: 14px;">남 / 54세 / 1970-05-12 / 접수 10:14 (대기 12분)</div>
+                <div id="pd-doc" style="margin-top: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px;"></div>
+              </div>
+
+              <div class="detail-content" style="padding: 32px; background: var(--bg-main);">
+                <h3 style="font-size: 16px; color: var(--text-main); margin-bottom: 20px;">📝 환자 입력 정보</h3>
+                <div class="raw-box" style="background: var(--surface); padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                  <div class="raw-row" style="margin-bottom: 24px;">
+                    <div class="raw-label" style="font-size: 13px; margin-bottom: 8px;">선택 부위</div>
+                    <div class="raw-value" id="pd-raw-part" style="font-size: 16px; font-weight: 600;">-</div>
+                  </div>
+                  <div class="raw-row" style="margin-bottom: 24px;">
+                    <div class="raw-label" style="font-size: 13px; margin-bottom: 8px;">선택 및 입력 증상</div>
+                    <div class="raw-value" id="pd-raw-symp" style="font-size: 16px; line-height: 1.5; font-weight: 600;">-</div>
+                  </div>
+                  <div class="raw-row" style="margin-bottom: 24px;">
+                    <div class="raw-label" style="font-size: 13px; margin-bottom: 8px;">현재 불편함 정도</div>
+                    <div class="raw-value" id="pd-raw-sev" style="font-size: 16px; font-weight: 600;">-</div>
+                  </div>
+                  <div class="raw-row">
+                    <div class="raw-label" style="font-size: 13px; margin-bottom: 8px;">발생 시점 및 패턴</div>
+                    <div class="raw-value" id="pd-raw-dur" style="font-size: 16px; font-weight: 600;">-</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Empty State -->
+            <div id="patient-empty-state" style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; color: var(--text-muted);">
+              <div style="font-size: 40px; margin-bottom: 16px;">🏥</div>
+              <div style="font-size: 14px; font-weight: 600;">환자를 선택해주세요</div>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="bed-modal" class="modal-overlay" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <span class="modal-close" onclick="document.getElementById('bed-modal').style.display='none'">&times;</span>
+<main class="dash-map">
+            <h2 class="map-title">응급실 병상 현황 (ER Layout)</h2>
+
+            <div class="zone">
+              <div class="zone-title">응급/중증 구역 (Resuscitation)</div>
+              <div class="bed-grid" id="zone-1">
+                <div class="bed empty">
+                  <div class="bed-num">Bed 1</div>
+                </div>
+                <div class="bed empty">
+                  <div class="bed-num">Bed 2</div>
+                </div>
+                <div class="bed empty">
+                  <div class="bed-num">Bed 3</div>
+                </div>
+                <div class="bed empty">
+                  <div class="bed-num">Bed 4</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="zone">
+              <div class="zone-title">일반 구역 (Observation)</div>
+              <div class="bed-grid" id="zone-2">
+                <div class="bed empty">
+                  <div class="bed-num">Bed 5</div>
+                </div>
+                <div class="bed empty">
+                  <div class="bed-num">Bed 6</div>
+                </div>
+                <div class="bed empty">
+                  <div class="bed-num">Bed 7</div>
+                </div>
+                <div class="bed empty">
+                  <div class="bed-num">Bed 8</div>
+                </div>
+                <div class="bed empty">
+                  <div class="bed-num">Bed 9</div>
+                </div>
+              </div>
+            </div>
+          </main>
+
+    </div>
+  </div>
+      <script>
+    let patients = [
+      { id: 1, name: "이정재", gender: "M", age: 54, dob: "1970-05-12", ktas: 2, time: "10:14", wait: 12, symp: "흉통, 호흡곤란, 식은땀", bed: 1, alert: "🚨 EKG 지연", doc: "병원이동 필요", docStatus: "busy", rawPart: "가슴/몸통 > 가슴", rawSymp: "가슴 통증, 호흡 곤란 / 직접 입력: \"가슴을 누가 누르는 것처럼 뻐근하고 땀이 나요\"", rawSev: "7-8 (매우 아픔)", rawDur: "오늘 시작됨" , type: "본인" },
+      { id: 2, name: "최민호", gender: "M", age: 62, dob: "1964-11-20", ktas: 1, time: "10:20", wait: 6, symp: "의식 저하, 호흡 미약", bed: 2, alert: "🚨 의사 진료 요망", doc: "응급처치 대기", docStatus: "avail", rawPart: "전신 상태 > 기타", rawSymp: "의식 없음 (보호자 대리 입력)", rawSev: "9-10 (참기 힘듦)", rawDur: "방금 전 시작됨" , type: "대리인" },
+      { id: 3, name: "김수민", gender: "F", age: 29, dob: "1997-03-05", ktas: 3, time: "10:02", wait: 24, symp: "우하복부 통증, 발열", bed: 5, alert: "혈액검사 대기중", doc: "입원 수속중", docStatus: "warn", rawPart: "가슴/몸통 > 배", rawSymp: "복통, 발열", rawSev: "5-6 (상당히 불편함)", rawDur: "며칠 전부터" , type: "본인" },
+      { id: 4, name: "정하나", gender: "F", age: 45, dob: "1981-08-15", ktas: 3, time: "09:50", wait: 36, symp: "심한 두통, 구토", bed: 6, alert: "Brain CT 대기", doc: "검사 대기중", docStatus: "avail", rawPart: "머리/얼굴 > 머리 전체", rawSymp: "두통, 메스꺼움/구토", rawSev: "7-8 (매우 아픔)", rawDur: "오늘 시작됨" , type: "본인" },
+      { id: 5, name: "박영호", gender: "M", age: 41, dob: "1985-02-28", ktas: 4, time: "09:41", wait: 45, symp: "발목 접질림, 부종", bed: 7, alert: "X-ray 완료", doc: "전문진료 대기", docStatus: "busy", rawPart: "다리/발 > 종아리/발", rawSymp: "발목 통증, 다리 붓기", rawSev: "5-6 (상당히 불편함)", rawDur: "방금 전 시작됨" , type: "본인" },
+      { id: 6, name: "이은지", gender: "F", age: 22, dob: "2004-09-11", ktas: 5, time: "10:18", wait: 8, symp: "가벼운 찰과상", bed: null, alert: "대기실 대기중", doc: "진료 대기중", docStatus: "avail", rawPart: "팔/손 > 팔 전체", rawSymp: "팔 통증 / 직접 입력: \"넘어져서 까졌어요\"", rawSev: "1-2 (아주 경미함)", rawDur: "오늘 시작됨" , type: "본인" },
+      { id: 7, name: "강지훈", gender: "M", age: 7, dob: "2019-04-10", ktas: 3, time: "10:25", wait: 5, symp: "고열, 기침", bed: null, alert: "대기실 대기중", doc: "진료 대기중", docStatus: "avail", rawPart: "머리/얼굴 > 머리 전체", rawSymp: "고열 / 보호자 입력", rawSev: "5-6 (상당히 불편함)", rawDur: "며칠 전부터" , type: "대리인" },
+      { id: 8, name: "윤소아", gender: "F", age: 12, dob: "2014-12-05", ktas: 4, time: "10:10", wait: 15, symp: "복통, 구토", bed: null, alert: "대기실 대기중", doc: "진료 대기중", docStatus: "avail", rawPart: "가슴/몸통 > 배", rawSymp: "복통, 구토", rawSev: "3-4 (조금 불편함)", rawDur: "오늘 시작됨" , type: "대리인" },
+      { id: 9, name: "송지민", gender: "F", age: 34, dob: "1990-07-22", ktas: 4, time: "09:55", wait: 30, symp: "어지러움, 빈혈", bed: 8, alert: "수액 투여중", doc: "경과 관찰중", docStatus: "avail", rawPart: "머리/얼굴 > 머리 전체", rawSymp: "어지러움", rawSev: "3-4 (조금 불편함)", rawDur: "오늘 시작됨" , type: "본인" },
+      { id: 10, name: "정태우", gender: "M", age: 8, dob: "2018-09-30", ktas: 2, time: "10:30", wait: 2, symp: "호흡 곤란, 청색증", bed: 3, alert: "🚨 산소 투여 요망", doc: "응급처치 대기", docStatus: "warn", rawPart: "가슴/몸통 > 가슴", rawSymp: "호흡 곤란", rawSev: "9-10 (참기 힘듦)", rawDur: "방금 전 시작됨" , type: "대리인" }
+    ];
+
+    let currentFilter = 'ALL';
+    let selectedPatientId = null;
+
+    function init() {
+      document.getElementById('stat-count').innerText = patients.length + '명';
+      renderQueue();
+      renderBeds();
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.q-filter').forEach(el => el.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      renderQueue();
+    }
+
+    function getFilteredPatients() {
+      if (currentFilter === 'KTAS1-2') return patients.filter(p => p.ktas <= 2);
+      if (currentFilter === 'KTAS3') return patients.filter(p => p.ktas === 3);
+      if (currentFilter === 'KTAS4-5') return patients.filter(p => p.ktas >= 4);
+      if (currentFilter === 'UNDER15') return patients.filter(p => p.age < 15);
+      if (currentFilter === 'AI_SORT') {
+        return [...patients].sort((a, b) => a.ktas - b.ktas || b.wait - a.wait);
+      }
+      return patients;
+    }
+
+    function renderQueue() {
+      const list = document.getElementById('queue-list');
+      list.innerHTML = '';
+      const filtered = getFilteredPatients();
+      filtered.forEach((p, index) => {
+        const item = document.createElement('div');
+        item.className = 'q-item' + (selectedPatientId === p.id ? ' active' : '');
+        item.draggable = true;
+        item.dataset.index = index;
+
+        const typeBadge = p.type === '대리인' ? `<span style="font-size: 11px; border: 1px solid #94A3B8; color: #64748B; padding: 1px 4px; border-radius: 4px; margin-left: 6px; vertical-align: middle; font-weight: 600;">대리인 작성</span>` : `<span style="font-size: 11px; border: 1px solid #CBD5E1; color: #94A3B8; padding: 1px 4px; border-radius: 4px; margin-left: 6px; vertical-align: middle; font-weight: 600;">본인 작성</span>`;
+        const under15Badge = p.age < 15 ? `<span style="font-size: 11px; background: #8B5CF6; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;">15세 미만</span>` : '';
+        const alertClass = p.alert.includes('🚨') ? 'delay-alert' : 'normal-alert';
+
+        item.innerHTML = `
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div class="drag-handle">
+            <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
+              <circle cx="3" cy="2" r="1.5"/><circle cx="7" cy="2" r="1.5"/>
+              <circle cx="3" cy="8" r="1.5"/><circle cx="7" cy="8" r="1.5"/>
+              <circle cx="3" cy="14" r="1.5"/><circle cx="7" cy="14" r="1.5"/>
+            </svg>
+          </div>
+          <div style="flex: 1;">
+            <div class="q-item-top">
+              <span class="q-name">${p.name} (${p.gender}/${p.age})${under15Badge}${typeBadge}</span>
+              <span class="ktas-badge k${p.ktas}">KTAS ${p.ktas}</span>
+            </div>
+            <div class="q-symp">${p.symp}</div>
+            <div class="q-meta">
+              <span>대기 ${p.wait}분</span>
+              
+            </div>
+            <div style="font-size: 14px; margin-top: 4px; font-weight: 600; color: ${p.docStatus === 'avail' ? 'var(--primary)' : (p.docStatus === 'warn' ? 'var(--ktas-3)' : 'var(--ktas-2)')};">
+              👨‍⚕️ ${p.doc}
+            </div>
+          </div>
+        </div>
+        `;
+        item.onclick = () => selectPatient(p.id);
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('dragleave', handleDragLeave);
+        item.addEventListener('drop', handleDrop);
+        item.addEventListener('dragend', handleDragEnd);
+        list.appendChild(item);
+      });
+    }
+
+    let dragSrcEl = null;
+    function handleDragStart(e) {
+      dragSrcEl = this;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', this.dataset.index);
+      this.style.opacity = '0.5';
+    }
+    function handleDragOver(e) {
+      if (e.preventDefault) e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      this.classList.add('drag-over');
+      return false;
+    }
+    function handleDragLeave(e) {
+      this.classList.remove('drag-over');
+    }
+    function handleDrop(e) {
+      if (e.stopPropagation) e.stopPropagation();
+      if (dragSrcEl !== this) {
+        const srcIndex = parseInt(dragSrcEl.dataset.index);
+        const tgtIndex = parseInt(this.dataset.index);
+        const filtered = getFilteredPatients();
+        const srcPatient = filtered[srcIndex];
+        const tgtPatient = filtered[tgtIndex];
+        const mainSrcIndex = patients.findIndex(p => p.id === srcPatient.id);
+        patients.splice(mainSrcIndex, 1);
+        const mainTgtIndex = patients.findIndex(p => p.id === tgtPatient.id);
+        patients.splice(mainTgtIndex, 0, srcPatient);
+        renderQueue();
+      }
+      return false;
+    }
+    function handleDragEnd(e) {
+      this.style.opacity = '1';
+      document.querySelectorAll('.q-item').forEach(el => el.classList.remove('drag-over'));
+    }
+
+    function renderBeds() {
+      const zone1 = document.getElementById('zone-1');
+      const zone2 = document.getElementById('zone-2');
+      zone1.innerHTML = '';
+      zone2.innerHTML = '';
+      for (let i = 1; i <= 9; i++) {
+        const p = patients.find(x => x.bed === i);
+        const bed = document.createElement('div');
+        if (p) {
+          bed.className = 'bed' + (selectedPatientId === p.id ? ' active' : '');
+          bed.onclick = () => selectPatient(p.id);
+          bed.innerHTML = `<div class="dot k${p.ktas}"></div><div class="bed-num">Bed ${i}</div><div class="bed-patient">${p.name}</div>`;
+        } else {
+          bed.className = 'bed empty';
+          bed.innerHTML = `<div class="bed-num">Bed ${i}</div>`;
+        }
+        if (i <= 4) zone1.appendChild(bed);
+        else zone2.appendChild(bed);
+      }
+    }
+
+    function selectPatient(id) {
+      selectedPatientId = id;
+      renderQueue();
+      renderBeds();
+      document.getElementById('patient-empty-state').style.display = 'none';
+      document.getElementById('patient-detail-container').style.display = 'flex';
+      const p = patients.find(x => x.id === id);
+      document.getElementById('pd-name').innerText = p.name;
+      const ktasBadge = document.getElementById('pd-ktas');
+      ktasBadge.className = `ktas-badge k${p.ktas}`;
+      ktasBadge.innerText = `KTAS ${p.ktas}`;
+      document.getElementById('pd-meta').innerText = `${p.gender === 'M' ? '남' : '여'} / ${p.age}세 / ${p.dob} / 접수 ${p.time} (대기 ${p.wait}분) / ${p.type} 작성`;
+      const pdDoc = document.getElementById('pd-doc');
+      pdDoc.innerHTML = `👨‍⚕️ 현재상태: ${p.doc}`;
+      pdDoc.style.color = p.docStatus === 'avail' ? 'var(--primary)' : (p.docStatus === 'warn' ? 'var(--ktas-3)' : 'var(--ktas-2)');
+      document.getElementById('pd-raw-part').innerText = p.rawPart;
+      document.getElementById('pd-raw-symp').innerText = p.rawSymp;
+      document.getElementById('pd-raw-sev').innerText = p.rawSev;
+      document.getElementById('pd-raw-dur').innerText = p.rawDur;
+    }
+    window.onload = init;
+  </script>
+</body>
+</html>
