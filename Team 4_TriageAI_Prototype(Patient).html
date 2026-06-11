@@ -1,0 +1,1228 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TriageAI - Patient App</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F8FAF9;
+    --surface: #FFFFFF;
+    --primary: #429E73;
+    --primary-light: #E6F3EC;
+    --text-main: #111827;
+    --text-muted: #6B7280;
+    --border: #E5E7EB;
+    --radius: 24px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; }
+  
+  body {
+    background: #E5E7EB;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .ipad-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .ipad-device {
+    position: relative;
+    width: 1366px;
+    height: 1024px;
+    background: #111;
+    border-radius: 56px;
+    box-shadow: 
+      0 0 0 4px #6c6d70, 
+      0 40px 80px rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform: scale(min(calc(90vw / 1366), calc(90vh / 1024)));
+    transform-origin: center center;
+    flex-shrink: 0;
+  }
+
+  .ipad-screen {
+    width: calc(100% - 64px);
+    height: calc(100% - 64px);
+    background: var(--bg);
+    border-radius: 32px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .ipad-camera {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 12px;
+    background: #1a1a1a;
+    border-radius: 50%;
+    box-shadow: inset 0 -1px 2px rgba(255,255,255,0.2), inset 0 1px 2px rgba(0,0,0,0.8);
+    z-index: 100;
+  }
+
+  .ipad-power {
+    position: absolute;
+    top: -6px;
+    left: 120px;
+    width: 60px;
+    height: 6px;
+    background: #6c6d70;
+    border-radius: 4px 4px 0 0;
+  }
+
+  .ipad-volume-up, .ipad-volume-down {
+    position: absolute;
+    left: -6px;
+    width: 6px;
+    height: 60px;
+    background: #6c6d70;
+    border-radius: 4px 0 0 4px;
+  }
+  
+  .ipad-volume-up { top: 120px; }
+  .ipad-volume-down { top: 200px; }
+
+  .app-header {
+    position: relative;
+    padding: 40px 60px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .back-btn {
+    background: transparent;
+    border: none;
+    font-size: 40px;
+    color: var(--text-main);
+    cursor: pointer;
+    visibility: hidden; 
+    z-index: 10;
+  }
+
+  .header-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-main);
+    text-align: center;
+  }
+
+  .toggle-switch {
+    z-index: 10; position: relative; width: 96px; height: 48px;
+    background: #F0F2F5; border: 2px solid #E5E7EB;
+    border-radius: 40px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 2px; font-weight: 700; font-size: 16px; color: #9CA3AF; transition: 0.3s;
+  }
+  .toggle-switch.ko .thumb { transform: translateX(0); }
+  .toggle-switch.en .thumb { transform: translateX(48px); }
+  .toggle-switch .thumb {
+    position: absolute; left: 2px; top: 2px; width: 40px; height: 40px;
+    background: var(--primary); border-radius: 50%; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(66, 158, 115, 0.3);
+  }
+  .toggle-label { z-index: 1; transition: 0.3s; user-select: none; width: 40px; text-align: center; }
+  .toggle-label.active { color: #FFF; }
+
+  .app-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 40px 30px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-content::-webkit-scrollbar { display: none; }
+
+  /* Views */
+  .view { display: none; flex-direction: column; flex: 1; animation: fadeIn 0.3s ease; }
+  .view.active { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Forms */
+  .input-field {
+    width: 100%;
+    background: #F9FAFB;
+    border: 2px solid transparent;
+    border-radius: 16px;
+    padding: 20px;
+    font-size: 20px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    color: var(--text-main);
+    appearance: none;
+    transition: 0.2s;
+  }
+  .input-field:focus { outline: none; background: #FFF; border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-light); }
+  .input-field::placeholder { color: #A0AAB2; }
+  .input-label {
+    font-size: 18px;
+    color: var(--text-main);
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  /* Typography */
+  h1 { font-size: 42px; font-weight: 800; color: var(--text-main); line-height: 1.35; margin-bottom: 16px; word-break: keep-all; letter-spacing: -0.02em; }
+  p.subtitle { font-size: 22px; font-weight: 500; color: var(--text-muted); line-height: 1.5; margin-bottom: 32px; word-break: keep-all;}
+
+  .notice-box {
+    background: #FFF5F5;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .notice-box p { font-size: 18px; color: #E53E3E; line-height: 1.5; font-weight: 500; letter-spacing: -0.04em; }
+
+  /* Buttons */
+  .btn-primary {
+    background: var(--primary);
+    color: #FFF;
+    border: none;
+    border-radius: 100px;
+    padding: 24px;
+    font-size: 26px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    margin-top: auto;
+    flex-shrink: 0;
+    transition: transform 0.1s, box-shadow 0.2s;
+    box-shadow: 0 8px 24px rgba(66, 158, 115, 0.3);
+  }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { background: var(--border); color: var(--text-muted); box-shadow: none; cursor: not-allowed; }
+
+  /* Body Model */
+  .body-model-container {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .body-part {
+    fill: #C9D1CC;
+    stroke: var(--surface);
+    stroke-width: 3px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .body-part:active, .body-part.selected { fill: var(--primary); }
+
+  .extra-parts {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .part-btn {
+    flex: 1;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    padding: 16px;
+    border-radius: 16px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  .part-btn.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    color: var(--primary);
+  }
+
+  /* Sub-part list */
+  .list-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .list-item {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-main);
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    display: flex;
+    justify-content: space-between;
+    transition: 0.2s;
+  }
+  .list-item.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    color: var(--primary);
+    box-shadow: 0 4px 16px rgba(66, 158, 115, 0.15);
+  }
+
+  /* Chips */
+  .chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .chip {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    padding: 16px 24px;
+    border-radius: 100px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: var(--shadow);
+  }
+  .chip.selected {
+    background: var(--primary);
+    color: #FFF;
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(66, 158, 115, 0.3);
+  }
+
+  /* Textarea */
+  .free-text {
+    width: 100%;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    font-size: 18px;
+    resize: none;
+    height: 100px;
+    box-shadow: var(--shadow);
+  }
+  .free-text:focus { outline: none; border-color: var(--primary); }
+
+  /* Pictorial Scale (Severity) */
+  .severity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .severity-btn {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .severity-btn .emoji { font-size: 36px; }
+  .severity-btn .label-box { text-align: left; }
+  .severity-btn .level { font-size: 14px; color: var(--text-muted); font-weight: 600; margin-bottom: 2px;}
+  .severity-btn .desc { font-size: 20px; color: var(--text-main); font-weight: 600; }
+  .severity-btn.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+  }
+
+  /* Review Box */
+  .review-box {
+    background: var(--surface);
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: var(--shadow);
+    margin-bottom: 30px;
+  }
+  .review-row {
+    margin-bottom: 16px;
+  }
+  .review-row:last-child { margin-bottom: 0; }
+  .review-label {
+    font-size: 18px;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .review-value {
+    font-size: 20px;
+    color: var(--text-main);
+    font-weight: 500;
+  }
+
+  .check-icon {
+    width: 80px; height: 80px;
+    background: var(--primary-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; color: var(--primary);
+    margin: 40px auto 24px;
+  }
+
+  /* New UI Elements */
+  .checkbox-group { display: flex; gap: 12px; margin-bottom: 16px; }
+  .check-btn {
+    flex: 1; background: var(--surface); border: 2px solid var(--border);
+    padding: 12px; border-radius: 12px; font-size: 18px; font-weight: 600;
+    color: var(--text-muted); text-align: center; cursor: pointer; transition: 0.2s;
+  }
+  .check-btn.selected {
+    background: var(--primary-light); border-color: var(--primary); color: var(--primary);
+  }
+
+  .callout-tooltip {
+    position: absolute; background: var(--primary); color: #fff;
+    padding: 12px 16px; border-radius: 12px; font-size: 16px; font-weight: 600;
+    pointer-events: none; z-index: 100; opacity: 0; transition: opacity 0.2s, transform 0.2s;
+    box-shadow: 0 4px 12px rgba(66, 158, 115, 0.3); text-align: center; white-space: nowrap;
+    transform: translate(-50%, -10px); left: 50%; top: 10px;
+  }
+  .callout-tooltip::after {
+    content: ''; position: absolute; bottom: 100%; left: 50%; margin-left: -8px;
+    border-width: 8px; border-style: solid; border-color: transparent transparent var(--primary) transparent;
+  }
+  .callout-tooltip.show { opacity: 1; transform: translate(-50%, 0); }
+  
+  .voice-btn {
+    background: var(--primary-light); border: none; border-radius: 20px;
+    width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 36px; color: var(--primary); flex-shrink: 0;
+  }
+  .flex-row { display: flex; gap: 12px; align-items: center; }
+  
+  .modal-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center;
+    border-radius: 32px;
+  }
+  .voice-modal {
+    background: var(--surface); border-radius: 24px; padding: 40px; width: 340px; text-align: center; box-shadow: var(--shadow);
+  }
+  .mic-animation {
+    width: 80px; height: 80px; background: var(--primary); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 40px; color: #fff;
+    margin: 0 auto 24px; animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(66, 158, 115, 0.4); }
+    70% { box-shadow: 0 0 0 20px rgba(66, 158, 115, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(66, 158, 115, 0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="ipad-wrapper">
+<div class="ipad-device">
+  <div class="ipad-camera"></div>
+  <div class="ipad-power"></div>
+  <div class="ipad-volume-up"></div>
+  <div class="ipad-volume-down"></div>
+  <div class="ipad-screen">
+  
+  <div class="app-header">
+    <button class="back-btn" id="btn-back" onclick="goBack()">←</button>
+    <div class="header-title" id="header-title">TriageAI</div>
+    <div class="toggle-switch ko" id="btn-lang" onclick="toggleLang()">
+      <div class="thumb"></div>
+      <span class="toggle-label active" id="lbl-ko">KO</span>
+      <span class="toggle-label" id="lbl-en">EN</span>
+    </div>
+  </div>
+
+  <div class="app-content">
+
+    <!-- 1. Home -->
+    <div id="view-home" class="view active">
+      <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+        <h1 data-i18n="t_home_title">안녕하세요.<br>접수를 도와드릴게요.</h1>
+        <p class="subtitle" data-i18n="t_home_sub">진료 전 환자분의 상태를 가장 잘 이해할 수 있도록 몇 가지 질문을 드립니다.</p>
+        
+        <div class="notice-box">
+          <p data-i18n="t_home_notice"><strong style="font-weight: 800; font-size: 22px;">주의사항</strong><br>본 시스템은 의료진의 빠른 확인을 위한 참고용입니다. 진료를 대체하지 않으며 응급 처치가 필요한 경우 즉시 의료진에게 알려주세요.<br><br>또한 의도적으로 증상을 과장하여 입력할 경우, 응급 환자의 진료가 지연될 수 있으며 정확한 진단에 방해가 될 수 있습니다.</p>
+        </div>
+      </div>
+      <button class="btn-primary" data-i18n="btn_start" onclick="goView('view-patient-info')">시작하기</button>
+    </div>
+
+    <!-- 1.5. Patient Info -->
+    <div id="view-patient-info" class="view">
+      <h1 data-i18n="t_info_title">환자분의 정보를<br>입력해주세요.</h1>
+      <p class="subtitle" data-i18n="t_info_sub">정확한 진료 접수를 위해 필요합니다.</p>
+      
+      <div style="margin-top: 20px;">
+        <label class="input-label" data-i18n="l_type">접수자</label>
+        <div class="checkbox-group">
+          <div class="check-btn" id="type-self" onclick="selectType('self')" data-i18n="type_self">환자 본인</div>
+          <div class="check-btn" id="type-proxy" onclick="selectType('proxy')" data-i18n="type_proxy">대리인</div>
+        </div>
+
+        <label class="input-label" data-i18n="l_name">이름</label>
+        <input type="text" id="patient-name" class="input-field" data-i18n-placeholder="p_name" placeholder="이름을 입력해주세요" oninput="checkPatientInfo()">
+        
+        <label class="input-label" data-i18n="l_dob" style="margin-top: 10px;">생년월일</label>
+        <div style="display:flex; gap: 12px; align-items: center; margin-bottom: 16px;">
+          <input type="tel" id="patient-dob" class="input-field" data-i18n-placeholder="p_dob" placeholder="예) 900101" maxlength="6" oninput="checkPatientInfo()" style="margin-bottom: 0; flex:1;">
+          <div class="check-btn" id="dob-unknown" onclick="toggleDobUnknown()" data-i18n="dob_unknown" style="flex:none; min-width: 100px; padding: 16px 20px; margin: 0; border-radius: 16px; display: flex; justify-content: center; align-items: center;">모름</div>
+        </div>
+        
+        <label class="input-label" data-i18n="l_gender" style="margin-top: 10px;">성별</label>
+        <div class="chip-group" style="margin-bottom: 0;">
+          <div class="chip" id="gender-m" onclick="selectGender('M')" data-i18n="g_male">남성</div>
+          <div class="chip" id="gender-f" onclick="selectGender('F')" data-i18n="g_female">여성</div>
+        </div>
+      </div>
+      
+      <button class="btn-primary" id="btn-info-next" data-i18n="btn_next" onclick="goView('view-body')" disabled style="margin-top: auto;">다음으로</button>
+    </div>
+
+    <!-- 2. Body Part Selection -->
+    <div id="view-body" class="view">
+      <h1 data-i18n="t_body_title">가장 불편한 부위가<br>어디인가요?</h1>
+      <p class="subtitle" data-i18n="t_body_sub">인체 모형에서 부위를 터치하거나 버튼을 선택해주세요.</p>
+      
+      <div style="display: flex; gap: 24px; margin-bottom: 24px; flex: 1; min-height: 0;">
+        <div class="body-model-container" style="flex: 2; display: flex; flex-direction: column; position: relative; margin-bottom: 0; min-height: 0; padding: 24px 32px; box-sizing: border-box;">
+          <div style="flex:1; display:flex; justify-content: center; align-items: center; min-height: 0;">
+            <svg viewBox="0 0 200 360" style="height: 100%; max-height: 360px;">
+              <g id="svg-body">
+                <circle cx="100" cy="40" r="30" class="body-part" data-part="Head" onclick="selectBodyPart('Head', event)" />
+                <path d="M65,80 Q100,65 135,80 L125,200 Q100,215 75,200 Z" class="body-part" data-part="Torso" onclick="selectBodyPart('Torso', event)" />
+                <rect x="30" y="85" width="22" height="110" rx="11" class="body-part" data-part="Upper limb" transform="rotate(15, 41, 85)" onclick="selectBodyPart('Upper limb', event)" />
+                <rect x="148" y="85" width="22" height="110" rx="11" class="body-part" data-part="Upper limb" transform="rotate(-15, 159, 85)" onclick="selectBodyPart('Upper limb', event)" />
+                <rect x="75" y="210" width="24" height="140" rx="12" class="body-part" data-part="Lower limb" onclick="selectBodyPart('Lower limb', event)" />
+                <rect x="101" y="210" width="24" height="140" rx="12" class="body-part" data-part="Lower limb" onclick="selectBodyPart('Lower limb', event)" />
+              </g>
+            </svg>
+          </div>
+          <div style="display: flex; gap: 12px; margin-top: 24px; flex-shrink: 0;">
+            <div class="part-btn" style="padding: 16px 8px; font-size: 20px; flex:1;" data-part="Mental" onclick="selectBodyPart('Mental', event)"><span data-i18n="t_mental">정신/마음</span></div>
+            <div class="part-btn" style="padding: 16px 8px; font-size: 20px; flex:1;" data-part="Physical" onclick="selectBodyPart('Physical', event)"><span data-i18n="t_physical">육체적 컨디션</span></div>
+            <div class="part-btn" style="padding: 16px 8px; font-size: 20px; flex:1;" data-part="Other" onclick="selectBodyPart('Other', event)"><span data-i18n="t_other">기타</span></div>
+          </div>
+        </div>
+        
+        <div style="flex: 1; background: var(--surface); border-radius: var(--radius); padding: 40px 32px; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--shadow);">
+          <div id="side-notification" data-i18n="t_body_guide" style="color: var(--text-muted); font-size: 22px; text-align: center; line-height: 1.6; word-break: keep-all; font-weight: 500;">
+            왼쪽 인체 모형이나<br>버튼을 선택해 주세요.
+          </div>
+        </div>
+      </div>
+      
+      <div style="display: flex; flex-direction: column;">
+        <button class="btn-primary" id="btn-body-next" data-i18n="btn_next" onclick="goView('view-subpart')" disabled style="margin-top: 0;">다음으로</button>
+      </div>
+    </div>
+
+    <!-- 3. Sub-part Selection -->
+    <div id="view-subpart" class="view">
+      <h1 data-i18n="t_subpart_title">정확히 어느 부위가<br>불편하신가요?</h1>
+      <p class="subtitle" id="subpart-subtitle">선택하신 부위의 세부 위치를 알려주세요.</p>
+      
+      <div class="list-menu" id="subpart-container">
+        <!-- Rendered by JS -->
+      </div>
+
+      <button class="btn-primary" id="btn-subpart-next" data-i18n="btn_next" onclick="goView('view-symptoms')" disabled>다음으로</button>
+    </div>
+
+    <!-- 4. Symptoms Selection -->
+    <div id="view-symptoms" class="view">
+      <h1 data-i18n="t_symp_title">어떤 증상이 있나요?</h1>
+      <p class="subtitle" id="symptoms-subtitle" data-i18n="t_symp_sub">해당하는 증상을 모두 선택해주세요. (최대 10개)</p>
+      
+      <div class="chip-group" id="symptoms-container">
+        <!-- Rendered by JS -->
+      </div>
+
+      <p class="subtitle" style="margin-bottom: 16px;" data-i18n="t_symp_free">목록에 없다면 직접 적어주세요</p>
+      <div class="flex-row">
+        <textarea class="free-text" id="free-text" data-i18n-placeholder="p_free" placeholder="예) 숨을 깊게 쉴 때 가슴이 찌르듯이 아파요" style="flex:1;"></textarea>
+        <button class="voice-btn" onclick="showVoiceModal()">🎤</button>
+      </div>
+      
+      <button class="btn-primary" style="margin-top:40px;" data-i18n="btn_next" onclick="saveSymptomsAndGo()">다음으로</button>
+    </div>
+
+    <!-- 5. Severity -->
+    <div id="view-severity" class="view">
+      <h1 data-i18n="t_sev_title">현재 얼마나<br>불편하신가요?</h1>
+      <p class="subtitle" data-i18n="t_sev_sub">가장 알맞은 표정과 설명을 선택해주세요.</p>
+      
+      <div class="severity-list">
+        <div class="severity-btn" data-val="0" onclick="selectSeverity('0', 'sev0')">
+          <div class="emoji">🙂</div>
+          <div class="label-box">
+            <div class="level">0</div>
+            <div class="desc" data-i18n="sev0">무통증 (전혀 아프지 않음)</div>
+          </div>
+        </div>
+        <div class="severity-btn" data-val="1-2" onclick="selectSeverity('1-2', 'sev1')">
+          <div class="emoji">😐</div>
+          <div class="label-box">
+            <div class="level">1-2</div>
+            <div class="desc" data-i18n="sev1">아주 경미함 (참을 만함)</div>
+          </div>
+        </div>
+        <div class="severity-btn" data-val="3-4" onclick="selectSeverity('3-4', 'sev2')">
+          <div class="emoji">🙁</div>
+          <div class="label-box">
+            <div class="level">3-4</div>
+            <div class="desc" data-i18n="sev2">조금 불편함 (신경 쓰임)</div>
+          </div>
+        </div>
+        <div class="severity-btn" data-val="5-6" onclick="selectSeverity('5-6', 'sev3')">
+          <div class="emoji">😣</div>
+          <div class="label-box">
+            <div class="level">5-6</div>
+            <div class="desc" data-i18n="sev3">상당히 불편함 (일상 지장)</div>
+          </div>
+        </div>
+        <div class="severity-btn" data-val="7-8" onclick="selectSeverity('7-8', 'sev4')">
+          <div class="emoji">😫</div>
+          <div class="label-box">
+            <div class="level">7-8</div>
+            <div class="desc" data-i18n="sev4">매우 아픔 (집중 불가)</div>
+          </div>
+        </div>
+        <div class="severity-btn" data-val="9-10" onclick="selectSeverity('9-10', 'sev5')">
+          <div class="emoji">😭</div>
+          <div class="label-box">
+            <div class="level">9-10</div>
+            <div class="desc" data-i18n="sev5">참기 힘듦 (최악의 상태)</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btn-severity-next" data-i18n="btn_next" onclick="goView('view-duration')" disabled>다음으로</button>
+    </div>
+
+    <!-- 6. Duration -->
+    <div id="view-duration" class="view">
+      <h1 data-i18n="t_dur_title">증상이 언제부터<br>시작되었나요?</h1>
+      <p class="subtitle" data-i18n="t_dur_sub">정확한 날짜를 몰라도 괜찮습니다. 패턴을 선택해주세요.</p>
+      
+      <div class="list-menu">
+        <div class="list-item" onclick="selectDuration(this, 'dur2')" style="flex-direction: column; align-items: stretch; gap: 16px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span data-i18n="dur2">오늘 시작됨</span>
+          </div>
+          <div id="hours-options" style="display: none; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+            <div class="check-btn" onclick="selectHour('0_6', event)" data-i18n="h_0_6" style="padding: 12px; border-radius: 8px; font-size: 16px;">0~6시간 전</div>
+            <div class="check-btn" onclick="selectHour('6_12', event)" data-i18n="h_6_12" style="padding: 12px; border-radius: 8px; font-size: 16px;">6~12시간 전</div>
+            <div class="check-btn" onclick="selectHour('12_18', event)" data-i18n="h_12_18" style="padding: 12px; border-radius: 8px; font-size: 16px;">12~18시간 전</div>
+            <div class="check-btn" onclick="selectHour('18_24', event)" data-i18n="h_18_24" style="padding: 12px; border-radius: 8px; font-size: 16px;">18~24시간 전</div>
+          </div>
+        </div>
+        <div class="list-item" onclick="selectDuration(this, 'dur3')"><span data-i18n="dur3">며칠 전부터</span></div>
+        <div class="list-item" onclick="selectDuration(this, 'dur4')"><span data-i18n="dur4">일주일 이상 됨</span></div>
+        <div class="list-item" onclick="selectDuration(this, 'dur5')"><span data-i18n="dur5">아팠다 안 아팠다 함 (반복)</span></div>
+        <div class="list-item" onclick="selectDuration(this, 'dur6')"><span data-i18n="dur6">잘 모르겠음</span></div>
+      </div>
+
+      <button class="btn-primary" id="btn-duration-next" data-i18n="btn_next" onclick="prepareReview()" disabled>다음으로</button>
+    </div>
+
+    <!-- 7. Review -->
+    <div id="view-review" class="view">
+      <h1 data-i18n="t_rev_title">입력하신 내용이<br>맞는지 확인해주세요.</h1>
+      <p class="subtitle" data-i18n="t_rev_sub">제출 후에는 의료진이 확인하고 안내해 드립니다.</p>
+      
+      <div class="review-box">
+        <div class="review-row">
+          <div class="review-label" data-i18n="r_info">환자 정보</div>
+          <div class="review-value" id="rev-info">-</div>
+        </div>
+        <div class="review-row">
+          <div class="review-label" data-i18n="r_part">선택 부위</div>
+          <div class="review-value" id="rev-part">-</div>
+        </div>
+        <div class="review-row">
+          <div class="review-label" data-i18n="r_symp">선택 및 입력 증상</div>
+          <div class="review-value" id="rev-symptoms">-</div>
+        </div>
+        <div class="review-row">
+          <div class="review-label" data-i18n="r_sev">현재 불편함 정도</div>
+          <div class="review-value" id="rev-severity">-</div>
+        </div>
+        <div class="review-row">
+          <div class="review-label" data-i18n="r_dur">발생 시점 및 패턴</div>
+          <div class="review-value" id="rev-duration">-</div>
+        </div>
+      </div>
+
+      <button class="btn-primary" data-i18n="btn_submit" onclick="goView('view-done')">접수 제출하기</button>
+    </div>
+
+    <!-- 8. Done -->
+    <div id="view-done" class="view">
+      <div style="flex:1; display:flex; flex-direction:column; justify-content:center; text-align:center;">
+        <div class="check-icon">✓</div>
+        <h1 data-i18n="t_done_title">접수가 완료되었습니다</h1>
+        <p class="subtitle" data-i18n="t_done_sub" style="margin-bottom:16px;">작성해주신 정보가 의료진에게 전달되었습니다.<br>대기실에서 잠시만 기다려주시면 안내해 드리겠습니다.</p>
+        <div style="background: var(--primary-light); color: var(--primary); font-weight: 600; font-size: 24px; padding: 24px; border-radius: 20px; display: inline-block; margin: 0 auto;">
+          <div style="font-size: 16px; color: var(--text-muted); margin-bottom: 8px;" data-i18n="t_wait_note">이 대기시간은 평균적으로 계산된 참고용 시간입니다.</div>
+          <span data-i18n="t_wait_time">현재 예상 대기 시간: 약 </span><span id="wait-time-val">15~30</span><span data-i18n="t_wait_min">분</span>
+        </div>
+      </div>
+      <button class="btn-primary" data-i18n="btn_restart" onclick="resetApp()">처음으로 돌아가기</button>
+    </div>
+
+  </div>
+  </div>
+</div>
+</div>
+
+<div class="modal-overlay" id="voice-modal">
+  <div class="voice-modal">
+    <div class="mic-animation">🎤</div>
+    <h2 style="font-size: 24px; margin-bottom: 12px; font-weight: 700;" data-i18n="modal_voice_title">음성 입력 중...</h2>
+    <p style="font-size: 18px; color: var(--text-muted);" data-i18n="modal_voice_sub">말씀을 마치시면 자동으로 입력됩니다.</p>
+    <button class="btn-primary" style="margin-top: 30px; font-size: 20px; padding: 16px;" onclick="hideVoiceModal()" data-i18n="modal_voice_btn">입력 완료 (임시)</button>
+  </div>
+</div>
+
+<script>
+  const i18n = {
+    ko: {
+      t_home_title: "안녕하세요.<br>접수를 도와드릴게요.",
+      t_home_sub: "진료 전 환자분의 상태를 가장 잘 이해할 수 있도록 몇 가지 질문을 드립니다.",
+      t_home_notice: "<strong style=\"font-weight: 800; font-size: 22px;\">주의사항</strong><br>본 시스템은 의료진의 빠른 확인을 위한 참고용입니다. 진료를 대체하지 않으며 응급 처치가 필요한 경우 즉시 의료진에게 알려주세요.<br><br>또한 의도적으로 증상을 과장하여 입력할 경우, 응급 환자의 진료가 지연될 수 있으며 정확한 진단에 방해가 될 수 있습니다.",
+      btn_start: "시작하기", btn_next: "다음으로", btn_submit: "접수 제출하기", btn_restart: "처음으로 돌아가기",
+      t_info_title: "환자분의 정보를<br>입력해주세요.", t_info_sub: "정확한 진료 접수를 위해 필요합니다.",
+      l_type: "접수자", type_self: "환자 본인", type_proxy: "대리인",
+      l_name: "이름", p_name: "이름을 입력해주세요", l_dob: "생년월일", p_dob: "예) 900101 (6자리)", dob_unknown: "모름",
+      l_gender: "성별", g_male: "남성", g_female: "여성",
+      t_body_title: "가장 불편한 부위가<br>어디인가요?", t_body_sub: "인체 모형에서 부위를 터치하거나 버튼을 선택해주세요.", t_body_guide: "왼쪽 인체 모형이나<br>버튼을 선택해 주세요.",
+      t_mental: "정신/마음", t_physical: "육체적 컨디션", t_other: "기타",
+      t_subpart_title: "정확히 어느 부위가<br>불편하신가요?",
+      t_symp_title: "어떤 증상이 있나요?", t_symp_sub: "해당하는 증상을 모두 선택해주세요. (최대 10개)", t_symp_free: "목록에 없다면 직접 적어주세요", p_free: "예) 숨을 깊게 쉴 때 가슴이 찌르듯이 아파요",
+      t_sev_title: "현재 얼마나<br>불편하신가요?", t_sev_sub: "가장 알맞은 표정과 설명을 선택해주세요.",
+      sev0: "무통증 (전혀 아프지 않음)", sev1: "아주 경미함 (참을 만함)", sev2: "조금 불편함 (신경 쓰임)", sev3: "상당히 불편함 (일상 지장)", sev4: "매우 아픔 (집중 불가)", sev5: "참기 힘듦 (최악의 상태)",
+      t_dur_title: "증상이 언제부터<br>시작되었나요?", t_dur_sub: "정확한 날짜를 몰라도 괜찮습니다. 패턴을 선택해주세요.",
+      dur2: "오늘 시작됨", h_0_6: "0~6시간 전", h_6_12: "6~12시간 전", h_12_18: "12~18시간 전", h_18_24: "18~24시간 전", dur3: "며칠 전부터", dur4: "일주일 이상 됨", dur5: "아팠다 안 아팠다 함 (반복)", dur6: "잘 모르겠음",
+      t_rev_title: "입력하신 내용이<br>맞는지 확인해주세요.", t_rev_sub: "제출 후에는 의료진이 확인하고 안내해 드립니다.",
+      r_info: "환자 정보", r_part: "선택 부위", r_symp: "선택 및 입력 증상", r_sev: "현재 불편함 정도", r_dur: "발생 시점 및 패턴",
+      t_done_title: "접수가 완료되었습니다", t_done_sub: "작성해주신 정보가 의료진에게 전달되었습니다.<br>대기실에서 잠시만 기다려주시면 안내해 드리겠습니다.",
+      t_wait_note: "이 대기시간은 평균적으로 계산된 참고용 시간입니다.", t_wait_time: "현재 예상 대기 시간: 약 ", t_wait_min: "분",
+      step_info: "환자 정보 입력", step1: "1 / 5 부위 선택", step2: "2 / 5 상세 부위", step3: "3 / 5 증상 선택", step4: "4 / 5 불편함 정도", step5: "5 / 5 발생 시점", step6: "최종 확인",
+      no_symp: "선택 및 입력사항 없음",
+      modal_voice_title: "음성 입력 중...", modal_voice_sub: "말씀을 마치시면 자동으로 입력됩니다.", modal_voice_btn: "입력 완료 (임시)"
+    },
+    en: {
+      t_home_title: "Hello.<br>Let us help you check in.",
+      t_home_sub: "We will ask a few questions to better understand your condition before you see the doctor.",
+      t_home_notice: "<strong style=\"font-weight: 800; font-size: 22px;\">Notice</strong><br>This system is for reference to help medical staff triage quickly. It does not replace medical treatment. If you have an emergency, please notify staff immediately.<br><br>Intentionally exaggerating symptoms may delay treatment for emergency patients and interfere with accurate diagnosis.",
+      btn_start: "Start", btn_next: "Next", btn_submit: "Submit Check-in", btn_restart: "Return to Home",
+      t_info_title: "Please enter<br>your information.", t_info_sub: "This is required for accurate check-in.",
+      l_type: "Registrant", type_self: "Patient (Self)", type_proxy: "Proxy",
+      l_name: "Name", p_name: "Enter your name", l_dob: "Date of Birth", p_dob: "e.g., YYMMDD", dob_unknown: "Unknown",
+      l_gender: "Gender", g_male: "Male", g_female: "Female",
+      t_body_title: "Where is your<br>main discomfort?", t_body_sub: "Touch the area on the body model or select a button.", t_body_guide: "Please select a body part<br>from the model or buttons on the left.",
+      t_mental: "Mental/Mind", t_physical: "Physical Condition", t_other: "Other",
+      t_subpart_title: "Exactly which part<br>is uncomfortable?",
+      t_symp_title: "What symptoms<br>are you experiencing?", t_symp_sub: "Please select all applicable symptoms. (Max 10)", t_symp_free: "Describe here if not in the list", p_free: "e.g., sharp chest pain when breathing deeply",
+      t_sev_title: "How severe is your<br>discomfort right now?", t_sev_sub: "Please select the face and description that best matches.",
+      sev0: "No pain (not painful at all)", sev1: "Very mild (tolerable)", sev2: "Slightly uncomfortable (noticeable)", sev3: "Quite uncomfortable (disrupts daily life)", sev4: "Very painful (cannot focus)", sev5: "Unbearable (worst condition)",
+      t_dur_title: "When did the<br>symptoms start?", t_dur_sub: "You don't need exact dates. Please select a pattern.",
+      dur2: "Started today", h_0_6: "0-6 hrs ago", h_6_12: "6-12 hrs ago", h_12_18: "12-18 hrs ago", h_18_24: "18-24 hrs ago", dur3: "A few days ago", dur4: "More than a week ago", dur5: "Comes and goes (repeated)", dur6: "Not sure",
+      t_rev_title: "Please review<br>your information.", t_rev_sub: "Once submitted, medical staff will review it and guide you.",
+      r_info: "Patient Info", r_part: "Selected Part", r_symp: "Symptoms", r_sev: "Severity", r_dur: "Onset / Pattern",
+      t_done_title: "Check-in Complete", t_done_sub: "Your information has been sent to the medical staff.<br>Please wait in the waiting room.",
+      t_wait_note: "This waiting time is an average estimate for reference.", t_wait_time: "Current estimated wait: approx. ", t_wait_min: " mins",
+      step_info: "Patient Info", step1: "1 / 5 Body Part", step2: "2 / 5 Sub-part", step3: "3 / 5 Symptoms", step4: "4 / 5 Severity", step5: "5 / 5 Duration", step6: "Final Review",
+      no_symp: "No symptoms selected or entered",
+      modal_voice_title: "Voice Input Active...", modal_voice_sub: "Speak your symptoms now.", modal_voice_btn: "Done (Temp)"
+    }
+  };
+
+  const clinicalData = {
+    "Head": {
+      label: { ko: "머리/얼굴", en: "Head/Face" },
+      sub: [
+        { id: "Eyes", label: { ko: "눈", en: "Eyes" }, items: { ko: ["시력 저하", "눈 통증", "가려움", "충혈", "눈물", "안구 건조", "눈부심", "시야 흐림", "눈곱", "이물감"], en: ["Decreased vision", "Eye pain", "Itchiness", "Redness", "Tearing", "Dry eyes", "Photophobia", "Blurred vision", "Eye discharge", "Foreign body sensation"] } },
+        { id: "Ears", label: { ko: "귀", en: "Ears" }, items: { ko: ["이명(귀울림)", "청력 저하", "귀 통증", "분비물", "귀 먹먹함", "어지럼증 동반", "귀 가려움", "귀 출혈", "부종", "청각 과민"], en: ["Tinnitus", "Hearing loss", "Ear pain", "Discharge", "Stuffy ear", "With dizziness", "Ear itchiness", "Bleeding", "Swelling", "Hyperacusis"] } },
+        { id: "Nose", label: { ko: "코", en: "Nose" }, items: { ko: ["코막힘", "콧물", "코피", "후각 상실", "재채기", "코 가려움", "코 통증", "비음", "코 건조함", "호흡 곤란"], en: ["Nasal congestion", "Runny nose", "Nosebleed", "Loss of smell", "Sneezing", "Nasal itchiness", "Nasal pain", "Nasal voice", "Dry nose", "Breathing difficulty"] } },
+        { id: "Mouth", label: { ko: "입/목", en: "Mouth/Throat" }, items: { ko: ["인후통", "삼키기 힘듦", "구내염", "치통", "입마름", "목 쉼", "잇몸 출혈", "미각 상실", "혀 통증", "입냄새"], en: ["Sore throat", "Difficulty swallowing", "Stomatitis", "Toothache", "Dry mouth", "Hoarseness", "Gum bleeding", "Loss of taste", "Tongue pain", "Bad breath"] } },
+        { id: "HeadGen", label: { ko: "머리 전체", en: "General Head" }, items: { ko: ["두통", "어지러움", "머리 다침", "탈모", "두피 가려움", "머리 압박감", "편두통", "머리 부종", "비듬", "기억력 저하 동반"], en: ["Headache", "Dizziness", "Head trauma", "Hair loss", "Scalp itchiness", "Head pressure", "Migraine", "Head swelling", "Dandruff", "With memory loss"] } }
+      ]
+    },
+    "Torso": {
+      label: { ko: "몸통", en: "Torso" },
+      sub: [
+        { id: "Chest", label: { ko: "가슴", en: "Chest" }, items: { ko: ["가슴 통증", "두근거림", "호흡 곤란", "가슴 답답함", "기침", "가래", "피 섞인 가래", "가슴 뻐근함", "빈맥", "흉부 압박감"], en: ["Chest pain", "Palpitations", "Shortness of breath", "Tightness", "Cough", "Sputum", "Bloody sputum", "Chest stiffness", "Tachycardia", "Chest pressure"] } },
+        { id: "Abdomen", label: { ko: "배", en: "Abdomen" }, items: { ko: ["복통", "소화불량", "메스꺼움/구토", "설사", "변비", "복부 팽만", "속쓰림", "혈변", "위산 역류", "가스 참"], en: ["Abdominal pain", "Indigestion", "Nausea/Vomiting", "Diarrhea", "Constipation", "Bloating", "Heartburn", "Bloody stool", "Acid reflux", "Gas"] } },
+        { id: "Back", label: { ko: "등", en: "Upper Back" }, items: { ko: ["등 통증", "등 결림", "어깨 뼈 아래 통증", "호흡 시 등 통증", "등 저림", "등 뜨거움", "등 뻐근함", "자세 변형", "등 붓기", "등 피부 발진"], en: ["Upper back pain", "Stiffness", "Pain under shoulder blade", "Back pain when breathing", "Tingling", "Burning sensation", "Stiffness", "Posture change", "Swelling", "Rash"] } },
+        { id: "Waist", label: { ko: "허리", en: "Lower Back" }, items: { ko: ["허리 통증", "허리 삐끗함", "방사통", "허리 굽히기 힘듦", "허리 저림", "아침 허리 강직", "허리 뻐근함", "엉덩이로 퍼지는 통증", "서 있기 힘듦", "걷기 힘듦"], en: ["Lower back pain", "Sprain", "Radiating pain", "Difficulty bending", "Tingling", "Morning stiffness", "Aching", "Pain radiating to hip", "Difficulty standing", "Difficulty walking"] } },
+        { id: "Pelvis", label: { ko: "골반/엉덩이", en: "Pelvis/Hip" }, items: { ko: ["골반 통증", "엉덩이 통증", "사타구니 통증", "골반 비대칭 느낌", "골반 저림", "앉을 때 통증", "고관절 통증", "골반 소리남", "생리통 동반", "빈뇨"], en: ["Pelvic pain", "Hip pain", "Groin pain", "Asymmetry feeling", "Tingling", "Pain when sitting", "Hip joint pain", "Clicking sound", "With cramps", "Frequent urination"] } }
+      ]
+    },
+    "Upper limb": {
+      label: { ko: "상지 (어깨/팔/손)", en: "Upper Extremity" },
+      sub: [
+        { id: "Shoulder", label: { ko: "어깨", en: "Shoulder" }, items: { ko: ["어깨 통증", "팔 올리기 힘듦", "결림", "어깨 관절 소리", "밤에 어깨 아픔", "어깨 무거움", "어깨 붓기", "어깨 탈구 느낌", "목과 연결된 통증", "어깨 뻣뻣함"], en: ["Shoulder pain", "Difficulty raising arm", "Stiffness", "Joint clicking", "Night pain", "Heaviness", "Swelling", "Dislocation feeling", "Neck connected pain", "Stiff shoulder"] } },
+        { id: "Arm", label: { ko: "팔", en: "Arm" }, items: { ko: ["팔 통증", "팔 저림", "팔 힘빠짐", "팔꿈치 통증", "팔 붓기", "팔 멍울", "팔 경련", "팔 피부 이상", "팔 온도 변화", "팔 찌릿함"], en: ["Arm pain", "Numbness", "Weakness", "Elbow pain", "Swelling", "Lump", "Cramp", "Skin issue", "Temperature change", "Tingling"] } },
+        { id: "Hand", label: { ko: "손/손목", en: "Hand/Wrist" }, items: { ko: ["손목 통증", "손가락 통증", "손떨림", "손 부음", "손가락 뻣뻣함", "손목 시큰거림", "손에 힘이 안 들어감", "손가락 관절 변형", "손끝 저림", "수족냉증"], en: ["Wrist pain", "Finger pain", "Tremor", "Swelling", "Finger stiffness", "Wrist aching", "Loss of grip strength", "Joint deformity", "Fingertip tingling", "Cold hands"] } }
+      ]
+    },
+    "Lower limb": {
+      label: { ko: "하지 (다리/발)", en: "Lower Extremity" },
+      sub: [
+        { id: "Thigh", label: { ko: "허벅지/무릎", en: "Thigh/Knee" }, items: { ko: ["무릎 통증", "무릎 관절 소리", "허벅지 통증", "무릎 붓기", "계단 오르내리기 힘듦", "무릎 뻣뻣함", "무릎 힘빠짐", "허벅지 저림", "허벅지 근육 경련", "무릎 열감"], en: ["Knee pain", "Joint clicking", "Thigh pain", "Knee swelling", "Difficulty with stairs", "Stiffness", "Weakness", "Thigh numbness", "Muscle cramp", "Heat sensation"] } },
+        { id: "Foot", label: { ko: "종아리/발", en: "Calf/Foot" }, items: { ko: ["발목 통증", "발가락 통증", "종아리 쥐남", "다리 붓기", "발바닥 통증", "발목 삠", "발뒤꿈치 통증", "종아리 저림", "발 시림", "무좀/피부질환"], en: ["Ankle pain", "Toe pain", "Calf cramp", "Leg swelling", "Sole pain", "Ankle sprain", "Heel pain", "Calf numbness", "Cold feet", "Athlete's foot/Skin issue"] } }
+      ]
+    },
+    "Mental": {
+      label: { ko: "정신/마음", en: "Mental/Mind" },
+      sub: [
+        { id: "Emotion", label: { ko: "감정/기분", en: "Emotion/Mood" }, items: { ko: ["우울감", "불안/초조", "분노 조절 어려움", "무기력함", "공황 발작", "이유 없는 눈물", "감정 기복", "죄책감", "절망감", "외로움"], en: ["Depression", "Anxiety", "Anger issues", "Lethargy", "Panic attack", "Crying without reason", "Mood swings", "Guilt", "Despair", "Loneliness"] } },
+        { id: "Sleep", label: { ko: "수면", en: "Sleep" }, items: { ko: ["불면증", "악몽", "과다 수면", "수면 중 각성", "잠들기 힘듦", "아침에 일찍 깸", "수면 무호흡", "가위 눌림", "자고 나도 피곤함", "수면 패턴 불규칙"], en: ["Insomnia", "Nightmares", "Oversleeping", "Waking up during sleep", "Difficulty falling asleep", "Early morning awakening", "Sleep apnea", "Sleep paralysis", "Tired after waking", "Irregular sleep pattern"] } },
+        { id: "Cognition", label: { ko: "인지/기억", en: "Cognition" }, items: { ko: ["기억력 저하", "집중력 저하", "환각/환청", "건망증 심화", "단어가 잘 안 떠오름", "판단력 저하", "망상", "방향 감각 상실", "의사소통 어려움", "현실감 저하"], en: ["Memory loss", "Poor concentration", "Hallucinations", "Severe forgetfulness", "Word finding difficulty", "Poor judgment", "Delusions", "Disorientation", "Difficulty communicating", "Derealization"] } }
+      ]
+    },
+    "Physical": {
+      label: { ko: "육체적 컨디션", en: "Physical Condition" },
+      sub: [
+        { id: "Fever", label: { ko: "체온 관련", en: "Temperature" }, items: { ko: ["발열", "오한", "식은땀", "몸이 뜨거움", "추위를 많이 탐", "열성 경련", "미열 지속", "체온계상 38도 이상", "안면 홍조", "열감과 오한 반복"], en: ["Fever", "Chills", "Night sweats", "Feeling hot", "Feeling very cold", "Febrile seizure", "Continuous low fever", "Above 38C", "Facial flushing", "Alternating fever/chills"] } },
+        { id: "Energy", label: { ko: "활력/기력", en: "Energy/Vitality" }, items: { ko: ["만성 피로", "체중 감소", "식욕 부진", "몸살", "체중 증가", "어지럼증", "전신 쇠약감", "탈수 증상", "식은땀", "갑작스러운 기력 저하"], en: ["Chronic fatigue", "Weight loss", "Loss of appetite", "Aching", "Weight gain", "Dizziness", "General weakness", "Dehydration", "Cold sweat", "Sudden energy drop"] } },
+        { id: "Skin", label: { ko: "피부/기타", en: "Skin/Other" }, items: { ko: ["두드러기", "가려움증", "피부 발진", "멍", "피부 건조", "상처가 안 나음", "여드름/뾰루지", "피부 각질", "물집", "피부색 변화"], en: ["Hives", "Itching", "Rash", "Bruising", "Dry skin", "Unhealing wound", "Acne", "Flaking", "Blister", "Skin color change"] } }
+      ]
+    },
+    "Other": {
+      label: { ko: "기타", en: "Other" },
+      sub: [
+        { id: "OtherGen", label: { ko: "기타 증상", en: "Other Symptoms" }, items: { ko: ["약물 부작용", "건강 검진 결과 이상", "예방 접종 후 이상", "알레르기 반응", "벌레 물림", "외상/타박상", "화상", "중독 의심", "기타 설명하기 어려운 증상", "기존 질환 악화"], en: ["Drug side effect", "Abnormal checkup result", "Post-vaccination issue", "Allergic reaction", "Insect bite", "Trauma", "Burn", "Suspected poisoning", "Hard to explain symptom", "Worsening of existing condition"] } }
+      ]
+    }
+  };
+
+  let lang = 'ko';
+  let state = {
+    type: null,
+    gender: null,
+    dobUnknown: false,
+    partKey: null,
+    subPartIdx: null,
+    symptoms: [],
+    freeText: "",
+    severityVal: null,
+    severityKey: null,
+    durationKey: null
+  };
+
+  const views = ["view-home", "view-patient-info", "view-body", "view-subpart", "view-symptoms", "view-severity", "view-duration", "view-review", "view-done"];
+  let historyStack = [];
+
+  function checkPatientInfo() {
+    const name = document.getElementById('patient-name').value.trim();
+    const dob = document.getElementById('patient-dob').value.trim();
+    const dobValid = state.dobUnknown || dob.length >= 6;
+    document.getElementById('btn-info-next').disabled = !(name.length > 0 && dobValid && state.gender && state.type);
+  }
+
+  function selectType(val) {
+    if (state.type === val) {
+      state.type = null;
+    } else {
+      state.type = val;
+    }
+    document.getElementById('type-self').classList.remove('selected');
+    document.getElementById('type-proxy').classList.remove('selected');
+    if (state.type === 'self') document.getElementById('type-self').classList.add('selected');
+    if (state.type === 'proxy') document.getElementById('type-proxy').classList.add('selected');
+    checkPatientInfo();
+  }
+
+  function toggleDobUnknown() {
+    state.dobUnknown = !state.dobUnknown;
+    const btn = document.getElementById('dob-unknown');
+    const input = document.getElementById('patient-dob');
+    if (state.dobUnknown) {
+      btn.classList.add('selected');
+      input.value = '';
+      input.disabled = true;
+    } else {
+      btn.classList.remove('selected');
+      input.disabled = false;
+    }
+    checkPatientInfo();
+  }
+
+  function selectGender(val) {
+    if (state.gender === val) {
+      state.gender = null;
+    } else {
+      state.gender = val;
+    }
+    document.getElementById('gender-m').classList.remove('selected');
+    document.getElementById('gender-f').classList.remove('selected');
+    if (state.gender === 'M') document.getElementById('gender-m').classList.add('selected');
+    if (state.gender === 'F') document.getElementById('gender-f').classList.add('selected');
+    checkPatientInfo();
+  }
+
+  function applyLanguage() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (i18n[lang][key]) el.innerHTML = i18n[lang][key];
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      const key = el.getAttribute('data-i18n-placeholder');
+      if (i18n[lang][key]) el.placeholder = i18n[lang][key];
+    });
+    
+    const currentView = document.querySelector('.view.active').id;
+    // Refresh dynamic content if active
+    if (currentView === 'view-body') {
+      const noti = document.getElementById('side-notification');
+      if (noti && !state.partKey) {
+        noti.innerHTML = i18n[lang].t_body_guide;
+      } else if (state.partKey && noti) {
+        const data = clinicalData[state.partKey];
+        if (data) {
+          let allItems = [];
+          data.sub.forEach(s => allItems.push(...s.items[lang]));
+          let examples = [...new Set(allItems)].slice(0, 4).join(', ');
+          noti.innerHTML = `<span style="color:var(--primary); font-weight:700; font-size: 32px;">${data.label[lang]}</span><br><br><span style="font-size: 22px;">${examples} ${lang === 'ko' ? '등' : 'etc.'}</span>`;
+        }
+      }
+    }
+    updateHeader(currentView);
+
+    if (currentView === 'view-subpart') renderSubParts();
+    if (currentView === 'view-symptoms') renderSymptoms();
+    if (currentView === 'view-review') prepareReview();
+  }
+
+  function toggleLang() {
+    lang = lang === 'ko' ? 'en' : 'ko';
+    const switchEl = document.getElementById('btn-lang');
+    if (lang === 'ko') {
+      switchEl.classList.remove('en');
+      switchEl.classList.add('ko');
+      document.getElementById('lbl-ko').classList.add('active');
+      document.getElementById('lbl-en').classList.remove('active');
+    } else {
+      switchEl.classList.remove('ko');
+      switchEl.classList.add('en');
+      document.getElementById('lbl-ko').classList.remove('active');
+      document.getElementById('lbl-en').classList.add('active');
+    }
+    applyLanguage();
+  }
+
+  function updateHeader(viewId) {
+    const backBtn = document.getElementById('btn-back');
+    const langBtn = document.getElementById('btn-lang');
+    if (viewId === 'view-home') {
+      backBtn.style.visibility = 'hidden';
+      langBtn.style.display = 'flex';
+      document.getElementById('header-title').innerText = 'TriageAI';
+    } else if (viewId === 'view-done') {
+      backBtn.style.visibility = 'hidden';
+      langBtn.style.display = 'none';
+      document.getElementById('header-title').innerText = 'TriageAI';
+    } else {
+      backBtn.style.visibility = 'visible';
+      langBtn.style.display = 'none';
+      let stepName = "";
+      if (viewId === 'view-patient-info') stepName = i18n[lang].step_info;
+      if (viewId === 'view-body') stepName = i18n[lang].step1;
+      if (viewId === 'view-subpart') stepName = i18n[lang].step2;
+      if (viewId === 'view-symptoms') stepName = i18n[lang].step3;
+      if (viewId === 'view-severity') stepName = i18n[lang].step4;
+      if (viewId === 'view-duration') stepName = i18n[lang].step5;
+      if (viewId === 'view-review') stepName = i18n[lang].step6;
+      document.getElementById('header-title').innerText = stepName;
+    }
+  }
+
+  function goView(viewId) {
+    const current = document.querySelector('.view.active').id;
+    if (current !== viewId) historyStack.push(current);
+    
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+
+    updateHeader(viewId);
+
+    if (viewId === 'view-subpart') renderSubParts();
+    if (viewId === 'view-symptoms') renderSymptoms();
+    if (viewId === 'view-done') {
+      const waitTime = Math.floor(Math.random() * (35 - 15 + 1)) + 15;
+      document.getElementById('wait-time-val').innerText = waitTime + " ~ " + (waitTime + 15);
+    }
+  }
+
+  function goBack() {
+    if (historyStack.length > 0) {
+      const prev = historyStack.pop();
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById(prev).classList.add('active');
+      updateHeader(prev);
+    }
+  }
+
+  function selectBodyPart(part, event) {
+    const noti = document.getElementById('side-notification');
+    if (state.partKey === part) {
+      state.partKey = null;
+      document.querySelectorAll('.body-part').forEach(el => el.classList.remove('selected'));
+      document.querySelectorAll('.part-btn').forEach(el => el.classList.remove('selected'));
+      document.getElementById('btn-body-next').disabled = true;
+      if(noti) noti.innerHTML = i18n[lang].t_body_guide;
+      return;
+    }
+
+    state.partKey = part;
+    state.subPartIdx = null;
+    
+    document.querySelectorAll('.body-part').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('.part-btn').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll(`.body-part[data-part="${part}"], .part-btn[data-part="${part}"]`).forEach(el => el.classList.add('selected'));
+
+    const data = clinicalData[part];
+    if (data && noti) {
+      let allItems = [];
+      data.sub.forEach(s => allItems.push(...s.items[lang]));
+      let examples = [...new Set(allItems)].slice(0, 4).join(', ');
+      noti.innerHTML = `<span style="color:var(--primary); font-weight:700; font-size: 32px;">${data.label[lang]}</span><br><br><span style="font-size: 22px;">${examples} ${lang === 'ko' ? '등' : 'etc.'}</span>`;
+    }
+
+    document.getElementById('btn-body-next').disabled = false;
+  }
+
+  function renderSubParts() {
+    const container = document.getElementById('subpart-container');
+    container.innerHTML = '';
+    const subs = clinicalData[state.partKey].sub;
+    
+    document.getElementById('subpart-subtitle').innerText = 
+      lang === 'ko' ? `[${clinicalData[state.partKey].label.ko}]의 세부 위치를 알려주세요.` 
+                    : `Please specify the area for [${clinicalData[state.partKey].label.en}].`;
+
+    subs.forEach((sub, idx) => {
+      const div = document.createElement('div');
+      div.className = 'list-item';
+      div.innerHTML = `<span>${sub.label[lang]}</span><span>→</span>`;
+      if (state.subPartIdx === idx) div.classList.add('selected');
+      
+      div.onclick = () => {
+        if (state.subPartIdx === idx) {
+          state.subPartIdx = null;
+          div.classList.remove('selected');
+          document.getElementById('btn-subpart-next').disabled = true;
+        } else {
+          document.querySelectorAll('.list-item').forEach(el => el.classList.remove('selected'));
+          div.classList.add('selected');
+          state.subPartIdx = idx;
+          document.getElementById('btn-subpart-next').disabled = false;
+        }
+      };
+      container.appendChild(div);
+    });
+    
+    document.getElementById('btn-subpart-next').disabled = (state.subPartIdx === null);
+  }
+
+  function renderSymptoms() {
+    const container = document.getElementById('symptoms-container');
+    container.innerHTML = '';
+    document.getElementById('free-text').value = state.freeText;
+
+    const sub = clinicalData[state.partKey].sub[state.subPartIdx];
+    const items = sub.items[lang];
+    
+    items.forEach((itemText, i) => {
+      const div = document.createElement('div');
+      div.className = 'chip';
+      div.innerText = itemText;
+      
+      if (state.symptoms.includes(i)) div.classList.add('selected');
+      
+      div.onclick = () => {
+        div.classList.toggle('selected');
+        if (div.classList.contains('selected')) {
+          if (!state.symptoms.includes(i) && state.symptoms.length < 10) state.symptoms.push(i);
+        } else {
+          state.symptoms = state.symptoms.filter(x => x !== i);
+        }
+      };
+      container.appendChild(div);
+    });
+  }
+
+  function saveSymptomsAndGo() {
+    state.freeText = document.getElementById('free-text').value.trim();
+    goView('view-severity');
+  }
+
+  function selectSeverity(val, key) {
+    if (state.severityVal === val) {
+      state.severityVal = null;
+      state.severityKey = null;
+      document.querySelectorAll('.severity-btn').forEach(el => el.classList.remove('selected'));
+      document.getElementById('btn-severity-next').disabled = true;
+      return;
+    }
+    state.severityVal = val;
+    state.severityKey = key;
+    document.querySelectorAll('.severity-btn').forEach(el => el.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+    document.getElementById('btn-severity-next').disabled = false;
+  }
+
+  function selectDuration(el, key) {
+      if (state.durationKey === key) {
+        state.durationKey = null;
+        state.hourKey = null;
+        document.querySelectorAll('#view-duration .list-item').forEach(c => c.classList.remove('selected'));
+        const ho = document.getElementById('hours-options');
+        if (ho) ho.style.display = 'none';
+        document.getElementById('btn-duration-next').disabled = true;
+        return;
+      }
+      state.durationKey = key;
+      state.hourKey = null;
+      document.querySelectorAll('#view-duration .list-item').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      
+      const hoursOptions = document.getElementById('hours-options');
+      if (key === 'dur2') {
+        hoursOptions.style.display = 'grid';
+        document.querySelectorAll('#hours-options .check-btn').forEach(b => b.classList.remove('selected'));
+        document.getElementById('btn-duration-next').disabled = true;
+      } else {
+        if (hoursOptions) hoursOptions.style.display = 'none';
+        document.getElementById('btn-duration-next').disabled = false;
+      }
+    }
+
+    function selectHour(val, e) {
+      e.stopPropagation();
+      state.hourKey = val;
+      document.querySelectorAll('#hours-options .check-btn').forEach(b => b.classList.remove('selected'));
+      e.currentTarget.classList.add('selected');
+      document.getElementById('btn-duration-next').disabled = false;
+    }
+
+    function prepareReview() {
+    const typeStr = state.type === 'self' ? i18n[lang].type_self : (state.type === 'proxy' ? i18n[lang].type_proxy : '');
+    const name = document.getElementById('patient-name').value;
+    const dob = state.dobUnknown ? i18n[lang].dob_unknown : document.getElementById('patient-dob').value;
+    const genderStr = state.gender === 'M' ? i18n[lang].g_male : (state.gender === 'F' ? i18n[lang].g_female : '');
+    document.getElementById('rev-info').innerText = `[${typeStr}] ${name} (${genderStr}, ${dob})`;
+
+    const pLabel = clinicalData[state.partKey].label[lang];
+    const sLabel = clinicalData[state.partKey].sub[state.subPartIdx].label[lang];
+    document.getElementById('rev-part').innerText = `${pLabel} > ${sLabel}`;
+    
+    const items = clinicalData[state.partKey].sub[state.subPartIdx].items[lang];
+    let sympText = state.symptoms.map(i => items[i]).join(', ');
+    
+    if (state.freeText) {
+      const freeLabel = lang === 'ko' ? '추가설명' : 'Note';
+      sympText += sympText ? ` / ${freeLabel}: ${state.freeText}` : `${freeLabel}: ${state.freeText}`;
+    }
+    if (!sympText) sympText = i18n[lang].no_symp;
+    document.getElementById('rev-symptoms').innerText = sympText;
+
+    if(state.severityVal) {
+      document.getElementById('rev-severity').innerText = `${state.severityVal} (${i18n[lang][state.severityKey]})`;
+    }
+    if(state.durationKey) {
+      let durationStr = i18n[lang][state.durationKey];
+      if (state.durationKey === 'dur2' && state.hourKey) {
+        durationStr += ` (${i18n[lang]['h_' + state.hourKey]})`;
+      }
+      document.getElementById('rev-duration').innerText = durationStr;
+    }
+
+    if(document.querySelector('.view.active').id !== 'view-review') {
+        goView('view-review');
+    }
+  }
+
+  function resetApp() {
+    state = { type: null, gender: null, dobUnknown: false, partKey: null, subPartIdx: null, symptoms: [], freeText: "", severityVal: null, severityKey: null, durationKey: null };
+    historyStack = [];
+    
+    document.getElementById('patient-name').value = '';
+    document.getElementById('patient-dob').value = '';
+    document.getElementById('patient-dob').disabled = false;
+    
+    document.getElementById('type-self').classList.remove('selected');
+    document.getElementById('type-proxy').classList.remove('selected');
+    document.getElementById('dob-unknown').classList.remove('selected');
+    document.getElementById('gender-m').classList.remove('selected');
+    document.getElementById('gender-f').classList.remove('selected');
+    document.getElementById('btn-info-next').disabled = true;
+
+    document.querySelectorAll('.body-part').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('.part-btn').forEach(el => el.classList.remove('selected'));
+    document.getElementById('btn-body-next').disabled = true;
+    
+    document.querySelectorAll('.severity-btn').forEach(el => el.classList.remove('selected'));
+    document.getElementById('btn-severity-next').disabled = true;
+    
+    document.querySelectorAll('#view-duration .list-item').forEach(c => c.classList.remove('selected'));
+    document.getElementById('btn-duration-next').disabled = true;
+    
+    document.getElementById('free-text').value = '';
+
+    const noti = document.getElementById('side-notification');
+    if(noti) noti.innerHTML = i18n[lang].t_body_guide;
+    goView('view-home');
+    historyStack = [];
+  }
+
+  function showVoiceModal() {
+    document.getElementById('voice-modal').style.display = 'flex';
+  }
+  function hideVoiceModal() {
+    document.getElementById('voice-modal').style.display = 'none';
+  }
+
+  // Initialize
+  applyLanguage();
+  
+
+</script>
+
+</body>
+</html>
